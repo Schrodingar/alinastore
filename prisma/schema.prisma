@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "./node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id        String    @id @default(uuid())
+  name      String
+  priceInCents Int
+  filePath  String
+  description String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  categoryId String
+  category  ProductCategory @relation(fields: [categoryId], references: [id])
+  variations ProductVariation[]
+  ratings    Int[] @default([])
+  reviews    Review[]  // Связь с отзывами
+  orders     Order[]
+  DownloadVerification DownloadVerification[]
+}
+
+model ProductCategory {
+  id       String            @id @default(uuid())
+  name     String
+  parentId String?
+  parent   ProductCategory?  @relation("ParentCategory", fields: [parentId], references: [id])
+  children ProductCategory[] @relation("ParentCategory")
+  products Product[]
+}
+
+model ProductVariation {
+  id                     String   @id @default(uuid())
+  product                Product  @relation(fields: [productId], references: [id])
+  productId              String
+  priceInCents           Int
+  sizeValue              Int
+  sizeUnit               String   @default("ml")
+  imagePaths             String[]
+  isAvailableForPurchase Boolean  @default(true)
+  orders                 Order[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  reviews   Review[]
+}
+
+model Order {
+  id                 String           @id @default(uuid())
+  pricePaidInCents   Int
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  userId             String
+  productId          String
+  productVariationId String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product            Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Restrict)
+}
+
+model DownloadVerification {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+
+model Review {
+  id          String   @id @default(uuid())
+  rating      Int      // Рейтинг (1-5 звезд)
+  advantages  String?  // Преимущества
+  disadvantages String? // Недостатки
+  comment     String?  // Комментарий
+  videoUrl    String?  // Ссылка на видео (например, YouTube)
+  imageUrls   String[] // Список ссылок на изображения
+  authorName  String   // Имя автора
+  authorEmail String   // Email автора
+  notifyByEmail Boolean @default(false) // Оповещение по email
+  createdAt   DateTime @default(now())
+  userId    String?  // Связь с User (необязательно)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String  // Связь с Product (обязательно)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
